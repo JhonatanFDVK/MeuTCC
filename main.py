@@ -30,25 +30,39 @@ def pipeline(img):
     X = 90
     Y = 320
 
-    contadorDeTransicao = 0
-    indicePrimeiratransicao = 0
-    indiceSegundatransicao = 0
+    lista = list(mask_erosao[X])
 
-    for i in range(638):
-        if (mask_erosao[X][i] != mask_erosao[X][i+1]):
-            contadorDeTransicao += 1
-            if (contadorDeTransicao == 1):
-                indicePrimeiratransicao = i
-            if (contadorDeTransicao == 2):
-                indiceSegundatransicao = i
-                break
+    lista[0] = 0
+    lista[len(lista) - 1] = 0
 
-    Y2 = ((indiceSegundatransicao - indicePrimeiratransicao) / 2) + indicePrimeiratransicao
+    listaDeIndices = []
+
+    primeiroIndice = 0
+    segundoIndice = len(lista) - 1
+
+    for i in range(1, len(lista)):
+        if (lista[i - 1] == 0 and lista[i] == 255):
+            primeiroIndice = i
+
+        if (lista[i - 1] == 255 and lista[i] == 0):
+            segundoIndice = i - 1
+            listaDeIndices.append((primeiroIndice, segundoIndice, segundoIndice - primeiroIndice))
+
+    maior = -1
+
+    for i in range(len(listaDeIndices)):
+        if (listaDeIndices[i][2] >= maior):
+            maior = listaDeIndices[i][2]
+            primeiroIndice = listaDeIndices[i][0]
+            segundoIndice = listaDeIndices[i][1]
+
+    Y2 = ((segundoIndice - primeiroIndice) / 2) + primeiroIndice
     Y2 = int(Y2)
 
     ya = Y - margem
     yb = Y + margem
 
+    #detecção do piso de alerta
 
     if(Y2 > yb):
         print("Mais para a esquerda")
@@ -56,9 +70,6 @@ def pipeline(img):
         print("Mais para a direita")
     if(Y2 <= yb and Y2 >= ya):
         print("Está no centro")
-
-    print(X)
-    print(Y2)
 
     mask_rgb = cv2.merge([mask_erosao, mask_erosao, mask_erosao])
     mask_rgb2 = cv2.circle(mask_rgb, (Y2, X), radius=6, color=(0, 0, 255), thickness=-1)
@@ -71,18 +82,21 @@ def pipeline(img):
     cv2.line(mask_rgb2, (Y2, 97), (320, 350), (0, 255, 255), 4)
     cv2.circle(mask_rgb2, (320, 355), radius=6, color=(0, 0, 200), thickness=-1)
 
-
     # adiciona uma borda na imagem
     cv2.rectangle(mask_rgb2, (0, 360), (638, 0), (255, 255, 0), 4)
 
-    cv2.imshow("Imagem com ponto vermelho", mask_rgb2)
+    numpy_horizontal = np.hstack((imagemCortada, mask_rgb2))
+    cv2.imshow("Painel final.",  numpy_horizontal)
+    #cv2.imshow("Imagem com ponto vermelho",mask_rgb2)
 
-"""imagem = cv2.imread("../Imagens/Imagem4.jpeg")
+"""
+imagem = cv2.imread("../Imagens/Imagem4.jpeg")
 
 pipeline(imagem)
 
 cv2.waitKey(0)
-cv2.destroyAllWindows() """
+cv2.destroyAllWindows() 
+"""
 
 cap = cv2.VideoCapture('../Imagens/video.mp4')
 
@@ -100,7 +114,6 @@ while(cap.isOpened()):
 
 
 cap.release()
-
 cv2.destroyAllWindows()
 
 
